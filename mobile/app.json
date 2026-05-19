@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "ProgramaPagamento",
+    "slug": "minimercado-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "platforms": [
+      "android"
+    ],
+    "android": {
+      "package": "com.romeuq.programapagamento"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "2540dda8-3ac7-4884-89dd-44614f7d1372"
+      }
+    },
+    "owner": "romas-q"
+  }
+}
