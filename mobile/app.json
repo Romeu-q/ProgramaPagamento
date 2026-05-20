@@ -1,14 +1,19 @@
 {
   "expo": {
-    "name": "ProgramaPagamento",
+    "name": "Teste",
     "slug": "minimercado-mobile",
     "version": "0.1.0",
+    "icon": "./assets/icon.png",
     "orientation": "portrait",
     "platforms": [
       "android"
     ],
     "android": {
-      "package": "com.romeuq.programapagamento"
+      "package": "com.romeuq.programapagamento",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#4f75ff"
+      }
     },
     "extra": {
       "eas": {
