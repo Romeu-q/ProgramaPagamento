@@ -32,7 +32,8 @@ export default async function handler(req, res) {
   try {
     await sendEmail(String(email).toLowerCase(), "Confirme seu cadastro no MercadoSmart", `Seu codigo de verificacao: ${code}`);
   } catch {
-    return json(res, 503, { detail: "Cadastro criado, mas o servidor nao conseguiu enviar o email." });
+    await supabase.from("users").delete().eq("cpf", cleanCpf);
+    return json(res, 503, { detail: "Servidor sem envio de email no momento. Tente novamente em instantes." });
   }
 
   return json(res, 200, { status: "pending_verification", message: "Cadastro criado. Verifique seu email para ativar a conta." });
