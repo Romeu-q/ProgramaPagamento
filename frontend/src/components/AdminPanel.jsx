@@ -28,13 +28,22 @@ export default function AdminPanel({ onBack }) {
 
   const headers = adminKey ? { "x-admin-key": adminKey } : {};
 
+  const parseResponse = async (res) => {
+    const raw = await res.text();
+    try {
+      return { ok: res.ok, status: res.status, data: JSON.parse(raw) };
+    } catch {
+      return { ok: res.ok, status: res.status, data: { detail: raw || `HTTP ${res.status}` } };
+    }
+  };
+
   const loadProducts = async () => {
     setLoading(true);
     try {
       const res = await fetch(`${API_URL}/products`, { headers });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.detail || "Falha ao carregar.");
-      setProducts(data);
+      const parsed = await parseResponse(res);
+      if (!parsed.ok) throw new Error(parsed.data?.detail || "Falha ao carregar.");
+      setProducts(parsed.data);
     } catch (e) {
       alert(e.message);
     } finally {
@@ -67,8 +76,8 @@ export default function AdminPanel({ onBack }) {
       headers: { "Content-Type": "application/json", ...headers },
       body: JSON.stringify(payload),
     });
-    const data = await res.json();
-    if (!res.ok) return alert(data?.detail || "Falha ao cadastrar.");
+    const parsed = await parseResponse(res);
+    if (!parsed.ok) return alert(parsed.data?.detail || "Falha ao cadastrar.");
     setForm({
       name: "",
       ean: "",
@@ -89,16 +98,16 @@ export default function AdminPanel({ onBack }) {
       headers: { "Content-Type": "application/json", ...headers },
       body: JSON.stringify(payload),
     });
-    const data = await res.json();
-    if (!res.ok) return alert(data?.detail || "Falha ao atualizar.");
+    const parsed = await parseResponse(res);
+    if (!parsed.ok) return alert(parsed.data?.detail || "Falha ao atualizar.");
     loadProducts();
   };
 
   const deleteProduct = async (id) => {
     if (!confirm("Excluir este produto?")) return;
     const res = await fetch(`${API_URL}/products/${id}`, { method: "DELETE", headers });
-    const data = await res.json();
-    if (!res.ok) return alert(data?.detail || "Falha ao excluir.");
+    const parsed = await parseResponse(res);
+    if (!parsed.ok) return alert(parsed.data?.detail || "Falha ao excluir.");
     loadProducts();
   };
 
@@ -110,9 +119,9 @@ export default function AdminPanel({ onBack }) {
       headers: { "Content-Type": "application/json", ...headers },
       body: JSON.stringify({ xml, supplier_name: supplierName || null }),
     });
-    const data = await res.json();
-    if (!res.ok) return alert(data?.detail || "Falha ao importar XML.");
-    setXmlResult(data);
+    const parsed = await parseResponse(res);
+    if (!parsed.ok) return alert(parsed.data?.detail || "Falha ao importar XML.");
+    setXmlResult(parsed.data);
     loadProducts();
   };
 
