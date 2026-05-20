@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+const API_BASE = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/$/, "");
 
 function money(value) {
   return Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -40,7 +40,7 @@ export default function AdminPanel({ onBack }) {
   const loadProducts = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/products`, { headers });
+      const res = await fetch(`${API_BASE}/api/products`, { headers });
       const parsed = await parseResponse(res);
       if (!parsed.ok) throw new Error(parsed.data?.detail || "Falha ao carregar.");
       setProducts(parsed.data);
@@ -71,7 +71,7 @@ export default function AdminPanel({ onBack }) {
       quantity: Number(form.quantity || 0),
       min_stock: Number(form.min_stock || 5),
     };
-    const res = await fetch(`${API_URL}/products`, {
+    const res = await fetch(`${API_BASE}/api/products`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...headers },
       body: JSON.stringify(payload),
@@ -93,7 +93,7 @@ export default function AdminPanel({ onBack }) {
   };
 
   const patchProduct = async (id, payload) => {
-    const res = await fetch(`${API_URL}/products/${id}`, {
+    const res = await fetch(`${API_BASE}/api/products/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", ...headers },
       body: JSON.stringify(payload),
@@ -105,7 +105,7 @@ export default function AdminPanel({ onBack }) {
 
   const deleteProduct = async (id) => {
     if (!confirm("Excluir este produto?")) return;
-    const res = await fetch(`${API_URL}/products/${id}`, { method: "DELETE", headers });
+    const res = await fetch(`${API_BASE}/api/products/${id}`, { method: "DELETE", headers });
     const parsed = await parseResponse(res);
     if (!parsed.ok) return alert(parsed.data?.detail || "Falha ao excluir.");
     loadProducts();
@@ -114,7 +114,7 @@ export default function AdminPanel({ onBack }) {
   const importXml = async () => {
     if (!xmlFile) return alert("Selecione um XML.");
     const xml = await xmlFile.text();
-    const res = await fetch(`${API_URL}/products/import-xml`, {
+    const res = await fetch(`${API_BASE}/api/products/import-xml`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...headers },
       body: JSON.stringify({ xml, supplier_name: supplierName || null }),
