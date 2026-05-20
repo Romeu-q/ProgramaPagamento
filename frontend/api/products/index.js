@@ -25,6 +25,8 @@ export default async function handler(req, res) {
       cost_price: Number(body.cost_price || 0),
       quantity: Number(body.quantity || 0),
       min_stock: Number(body.min_stock || 5),
+      image_url: body.image_url ? String(body.image_url) : null,
+      supplier_name: body.supplier_name ? String(body.supplier_name) : null,
       is_age_restricted: Boolean(body.is_age_restricted),
     };
     if (!payload.name || !payload.ean) return json(res, 400, { detail: "Nome e EAN obrigatorios." });

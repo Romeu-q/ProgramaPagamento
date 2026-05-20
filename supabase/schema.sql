@@ -6,6 +6,8 @@ create table if not exists public.products (
   cost_price numeric not null default 0,
   quantity integer not null default 0,
   min_stock integer not null default 5,
+  image_url text null,
+  supplier_name text null,
   expiration_date date null,
   is_age_restricted boolean not null default false
 );

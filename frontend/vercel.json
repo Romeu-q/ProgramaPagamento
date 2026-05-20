@@ -12,6 +12,7 @@
     { "source": "/products/ean/:ean", "destination": "/api/products/ean/:ean" },
     { "source": "/products", "destination": "/api/products" },
     { "source": "/products/:id", "destination": "/api/products/:id" },
+    { "source": "/products/import-xml", "destination": "/api/products/import-xml" },
     { "source": "/dev/seed-test-stock", "destination": "/api/dev/seed-test-stock" }
   ]
 }

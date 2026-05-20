@@ -15,12 +15,18 @@ export default async function handler(req, res) {
   if (req.method === "PATCH") {
     const body = readBody(req);
     const payload = {};
-    for (const key of ["name", "ean", "selling_price", "cost_price", "quantity", "min_stock", "is_age_restricted"]) {
+    for (const key of ["name", "ean", "selling_price", "cost_price", "quantity", "min_stock", "is_age_restricted", "image_url", "supplier_name"]) {
       if (body[key] !== undefined) payload[key] = body[key];
     }
     const { data, error } = await supabase.from("products").update(payload).eq("id", id).select("*").single();
     if (error) return json(res, 500, { detail: "Falha ao atualizar produto." });
     return json(res, 200, data);
+  }
+
+  if (req.method === "DELETE") {
+    const { error } = await supabase.from("products").delete().eq("id", id);
+    if (error) return json(res, 500, { detail: "Falha ao excluir produto." });
+    return json(res, 200, { status: "ok" });
   }
 
   return json(res, 405, { detail: "Metodo nao permitido." });
