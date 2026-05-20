@@ -1,0 +1,16 @@
+{
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/dist",
+  "rewrites": [
+    { "source": "/health", "destination": "/api/health" },
+    { "source": "/auth/register", "destination": "/api/auth/register" },
+    { "source": "/auth/login", "destination": "/api/auth/login" },
+    { "source": "/auth/verify-email", "destination": "/api/auth/verify-email" },
+    { "source": "/auth/resend-verification", "destination": "/api/auth/resend-verification" },
+    { "source": "/auth/reset-password", "destination": "/api/auth/reset-password" },
+    { "source": "/unlock-fridge", "destination": "/api/unlock-fridge" },
+    { "source": "/payment/pix/generate", "destination": "/api/payment/pix-generate" },
+    { "source": "/products/ean/:ean", "destination": "/api/products/ean/:ean" },
+    { "source": "/dev/seed-test-stock", "destination": "/api/dev/seed-test-stock" }
+  ]
+}

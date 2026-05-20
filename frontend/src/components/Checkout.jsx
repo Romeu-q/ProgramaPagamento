@@ -5,7 +5,7 @@ import {
   Smartphone, Grid, Sparkles, AlertTriangle, ShieldCheck, Printer, Check
 } from 'lucide-react';
 
-const API_URL = 'http://localhost:8000';
+const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
 const CATALOG = [
   { id: 1, name: 'Água Mineral 500ml', ean: '7891000100101', selling_price: 3.5, category: 'Bebidas', icon: '💧', color: 'bg-blue-50 text-blue-600' },

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, Clock, X, Copy, Check, ShieldCheck, AlertCircle } from 'lucide-react';
 
-const API_URL = 'http://localhost:8000';
+const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
 const PixModal = ({ totalAmount, cart, onClose, onPaymentSuccess }) => {
   const [pixData, setPixData] = useState(null);

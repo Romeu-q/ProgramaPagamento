@@ -1,0 +1,9 @@
+{
+  "name": "programa-pagamento-api",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.8",
+    "nodemailer": "^6.10.1"
+  }
+}
