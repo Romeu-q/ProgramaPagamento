@@ -13,15 +13,23 @@ import database
 import models
 import schemas
 
-# Cria tabelas base
 models.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI(title="Minimercado Autonomo API")
 
+
+def parse_cors_origins() -> list[str]:
+    raw = os.getenv("CORS_ALLOW_ORIGINS", "*").strip()
+    if not raw or raw == "*":
+        return ["*"]
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
+cors_origins = parse_cors_origins()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=cors_origins,
+    allow_credentials=cors_origins != ["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -35,8 +43,13 @@ TEST_STOCK_ITEMS = [
 ]
 
 
+def is_sqlite() -> bool:
+    return str(database.engine.url).startswith("sqlite")
+
+
 def ensure_user_columns():
-    # migração simples para SQLite local sem Alembic
+    if not is_sqlite():
+        return
     with database.engine.connect() as conn:
         table_info = conn.execute(text("PRAGMA table_info(users)")).fetchall()
         cols = {row[1] for row in table_info}
@@ -61,11 +74,13 @@ def send_email(to_email: str, subject: str, body: str):
     smtp_user = os.getenv("SMTP_USER")
     smtp_pass = os.getenv("SMTP_PASSWORD")
     smtp_from = os.getenv("SMTP_FROM", smtp_user or "no-reply@mercadosmart.local")
+    email_mock_enabled = os.getenv("EMAIL_MOCK_ENABLED", "false").lower() == "true"
 
     if not smtp_host:
-        # fallback local para não travar fluxo em dev
-        print(f"[EMAIL-MOCK] To: {to_email} | Subject: {subject} | Body: {body}")
-        return
+        if email_mock_enabled:
+            print(f"[EMAIL-MOCK] To: {to_email} | Subject: {subject} | Body: {body}")
+            return
+        raise HTTPException(status_code=503, detail="Envio de email nao configurado no servidor.")
 
     message = MIMEText(body, "plain", "utf-8")
     message["Subject"] = subject
@@ -92,6 +107,11 @@ def seed_test_stock(db: Session):
         created += 1
     db.commit()
     return created
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 
 @app.get("/products/ean/{ean}", response_model=schemas.Product)
