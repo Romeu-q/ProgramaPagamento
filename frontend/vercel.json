@@ -10,6 +10,8 @@
     { "source": "/payment/pix/generate", "destination": "/api/payment/pix-generate" },
     { "source": "/webhooks/mercadopago", "destination": "/api/webhooks/mercadopago" },
     { "source": "/products/ean/:ean", "destination": "/api/products/ean/:ean" },
+    { "source": "/products", "destination": "/api/products" },
+    { "source": "/products/:id", "destination": "/api/products/:id" },
     { "source": "/dev/seed-test-stock", "destination": "/api/dev/seed-test-stock" }
   ]
 }
