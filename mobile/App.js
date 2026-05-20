@@ -13,6 +13,7 @@ const STORAGE_KEYS = { SESSION: '@pm_session', HISTORY: '@pm_history' };
 const SUPPORT_PHONE = '5575991744078';
 const REQUEST_TIMEOUT_MS = 7000;
 const MAX_RETRIES = 2;
+const PAYMENT_METHOD = { PIX: 'PIX', DEBIT: 'DEBIT', CREDIT: 'CREDIT' };
 
 // Premium mockup categories
 const MOCK_CATEGORIES = [
@@ -54,6 +55,7 @@ export default function App() {
   // App state
   const [isScanningBLE, setIsScanningBLE] = useState(false);
   const [cart, setCart] = useState([]);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(PAYMENT_METHOD.PIX);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [hasPermission, setHasPermission] = useState(null);
   const [pixData, setPixData] = useState(null);
@@ -412,31 +414,38 @@ export default function App() {
     return Object.entries(groupedItems).map(([productId, quantity]) => ({ product_id: Number(productId), quantity }));
   };
 
-  const persistOrder = (items, total, pixCode) => {
+  const persistOrder = (items, total, pixCode, paymentMethod) => {
     const order = {
       id: `PED-${Math.floor(100000 + Math.random() * 900000)}`,
       date: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       items,
       total,
-      pixCode
+      pixCode,
+      paymentMethod,
     };
     setOrderHistory((prev) => [order, ...prev].slice(0, 15));
     setLastOrderSummary(order);
   };
 
-  const handleGeneratePix = async () => {
+  const handleGeneratePayment = async () => {
     if (cart.length === 0) return Alert.alert('Carrinho vazio', 'Por favor, adicione algum produto ao carrinho.');
     setIsLoading(true);
     try {
       const orderItems = groupedCart.map((item) => ({ name: item.name, quantity: item.quantity }));
-      const data = await apiRequest('/payment/pix/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ total_amount: totalAmount, items: buildPaymentItems() }),
-      }, 'Erro ao gerar PIX.');
+      if (selectedPaymentMethod === PAYMENT_METHOD.PIX) {
+        const data = await apiRequest('/payment/pix/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ total_amount: totalAmount, items: buildPaymentItems() }),
+        }, 'Erro ao gerar PIX.');
 
-      setPixData({ copia_cola: data.pix_copia_e_cola, amount: totalAmount });
-      persistOrder(orderItems, totalAmount, data.pix_copia_e_cola);
+        setPixData({ copia_cola: data.pix_copia_e_cola, amount: totalAmount });
+        persistOrder(orderItems, totalAmount, data.pix_copia_e_cola, selectedPaymentMethod);
+      } else {
+        setPixData(null);
+        persistOrder(orderItems, totalAmount, null, selectedPaymentMethod);
+      }
+
       setCart([]);
       setShowSuccess(true);
 
@@ -447,8 +456,13 @@ export default function App() {
       const orderItems = groupedCart.map((item) => ({ name: item.name, quantity: item.quantity }));
       const mockPixCode = `00020101021226830014BR.GOV.BCB.PIX2561pix-app-condominio@banco.com5204000053039865406${totalAmount.toFixed(2)}5802BR5920Mercadinho Condominio6009SAO PAULO62070503***6304`;
 
-      setPixData({ copia_cola: mockPixCode, amount: totalAmount });
-      persistOrder(orderItems, totalAmount, mockPixCode);
+      if (selectedPaymentMethod === PAYMENT_METHOD.PIX) {
+        setPixData({ copia_cola: mockPixCode, amount: totalAmount });
+        persistOrder(orderItems, totalAmount, mockPixCode, selectedPaymentMethod);
+      } else {
+        setPixData(null);
+        persistOrder(orderItems, totalAmount, null, selectedPaymentMethod);
+      }
       setCart([]);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 4500);
@@ -811,15 +825,59 @@ export default function App() {
                       <Text style={styles.summaryValue}>R$ {totalAmount.toFixed(2)}</Text>
                     </View>
 
+                    <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
+                      <TouchableOpacity
+                        onPress={() => setSelectedPaymentMethod(PAYMENT_METHOD.PIX)}
+                        style={{
+                          flex: 1,
+                          paddingVertical: 10,
+                          borderRadius: 10,
+                          borderWidth: 1,
+                          borderColor: selectedPaymentMethod === PAYMENT_METHOD.PIX ? C.primary : '#cbd5e1',
+                          backgroundColor: selectedPaymentMethod === PAYMENT_METHOD.PIX ? '#e0f2fe' : '#fff',
+                        }}
+                      >
+                        <Text style={{ textAlign: 'center', fontWeight: '700' }}>PIX</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => setSelectedPaymentMethod(PAYMENT_METHOD.DEBIT)}
+                        style={{
+                          flex: 1,
+                          paddingVertical: 10,
+                          borderRadius: 10,
+                          borderWidth: 1,
+                          borderColor: selectedPaymentMethod === PAYMENT_METHOD.DEBIT ? C.primary : '#cbd5e1',
+                          backgroundColor: selectedPaymentMethod === PAYMENT_METHOD.DEBIT ? '#e0f2fe' : '#fff',
+                        }}
+                      >
+                        <Text style={{ textAlign: 'center', fontWeight: '700' }}>Débito</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => setSelectedPaymentMethod(PAYMENT_METHOD.CREDIT)}
+                        style={{
+                          flex: 1,
+                          paddingVertical: 10,
+                          borderRadius: 10,
+                          borderWidth: 1,
+                          borderColor: selectedPaymentMethod === PAYMENT_METHOD.CREDIT ? C.primary : '#cbd5e1',
+                          backgroundColor: selectedPaymentMethod === PAYMENT_METHOD.CREDIT ? '#e0f2fe' : '#fff',
+                        }}
+                      >
+                        <Text style={{ textAlign: 'center', fontWeight: '700' }}>Crédito</Text>
+                      </TouchableOpacity>
+                    </View>
+
                     <TouchableOpacity
                       style={styles.payBtnCheckout}
-                      onPress={handleGeneratePix}
+                      onPress={handleGeneratePayment}
                       disabled={isLoading}
                     >
                       {isLoading ? (
                         <ActivityIndicator color="#fff" />
                       ) : (
-                        <Text style={styles.payBtnCheckoutText}>Gerar Pix de Pagamento</Text>
+                        <Text style={styles.payBtnCheckoutText}>
+                          {selectedPaymentMethod === PAYMENT_METHOD.PIX ? 'Gerar Pix de Pagamento' : `Pagar no ${selectedPaymentMethod === PAYMENT_METHOD.DEBIT ? 'Débito' : 'Crédito'}`}
+                        </Text>
                       )}
                     </TouchableOpacity>
                   </View>

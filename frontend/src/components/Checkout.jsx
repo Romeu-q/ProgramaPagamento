@@ -891,7 +891,7 @@ const Checkout = () => {
                       disabled={paymentState === 'PROCESSING'}
                       className="w-full py-4.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-base tracking-wide transition-all disabled:opacity-40 cursor-pointer shadow-lg hover:shadow-indigo-500/20"
                     >
-                      {paymentState === 'PROCESSING' ? 'PROCESSANDO TRANSACÃO...' : 'SIMULAR APROXIMACÃO/INSERCÃO'}
+                      {paymentState === 'PROCESSING' ? 'PROCESSANDO TRANSAÇÃO...' : 'SIMULAR APROXIMAÇÃO/INSERÇÃO'}
                     </button>
                     {paymentState === 'FAILED' && (
                       <button

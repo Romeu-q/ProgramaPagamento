@@ -8,6 +8,7 @@
     { "source": "/auth/reset-password", "destination": "/api/auth/reset-password" },
     { "source": "/unlock-fridge", "destination": "/api/unlock-fridge" },
     { "source": "/payment/pix/generate", "destination": "/api/payment/pix-generate" },
+    { "source": "/webhooks/mercadopago", "destination": "/api/webhooks/mercadopago" },
     { "source": "/products/ean/:ean", "destination": "/api/products/ean/:ean" },
     { "source": "/dev/seed-test-stock", "destination": "/api/dev/seed-test-stock" }
   ]
