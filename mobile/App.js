@@ -11,7 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const AUTH_MODE = { LOGIN: 'login', REGISTER: 'register' };
 const STORAGE_KEYS = { SESSION: '@pm_session', HISTORY: '@pm_history' };
 const SUPPORT_PHONE = '5575991744078';
-const REQUEST_TIMEOUT_MS = 7000;
+const REQUEST_TIMEOUT_MS = 20000;
 const MAX_RETRIES = 2;
 const PAYMENT_METHOD = { PIX: 'PIX', DEBIT: 'DEBIT', CREDIT: 'CREDIT' };
 
@@ -441,31 +441,20 @@ export default function App() {
 
         setPixData({ copia_cola: data.pix_copia_e_cola, amount: totalAmount });
         persistOrder(orderItems, totalAmount, data.pix_copia_e_cola, selectedPaymentMethod);
+        setCart([]);
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 4500);
       } else {
-        setPixData(null);
-        persistOrder(orderItems, totalAmount, null, selectedPaymentMethod);
+        Alert.alert(
+          'Pagamento pendente',
+          selectedPaymentMethod === PAYMENT_METHOD.DEBIT
+            ? 'Débito ainda depende da integração com POS/maquininha para confirmar.'
+            : 'Crédito ainda depende da integração com POS/maquininha para confirmar.'
+        );
+        return;
       }
-
-      setCart([]);
-      setShowSuccess(true);
-
-      // Auto close success modal after 4s
-      setTimeout(() => setShowSuccess(false), 4500);
     } catch (error) {
-      // Mock payment simulation locally
-      const orderItems = groupedCart.map((item) => ({ name: item.name, quantity: item.quantity }));
-      const mockPixCode = `00020101021226830014BR.GOV.BCB.PIX2561pix-app-condominio@banco.com5204000053039865406${totalAmount.toFixed(2)}5802BR5920Mercadinho Condominio6009SAO PAULO62070503***6304`;
-
-      if (selectedPaymentMethod === PAYMENT_METHOD.PIX) {
-        setPixData({ copia_cola: mockPixCode, amount: totalAmount });
-        persistOrder(orderItems, totalAmount, mockPixCode, selectedPaymentMethod);
-      } else {
-        setPixData(null);
-        persistOrder(orderItems, totalAmount, null, selectedPaymentMethod);
-      }
-      setCart([]);
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 4500);
+      Alert.alert('Falha no pagamento', parseApiError(error, 'Não foi possível processar o pagamento agora.'));
     } finally {
       setIsLoading(false);
     }

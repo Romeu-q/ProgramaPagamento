@@ -231,45 +231,18 @@ const Checkout = () => {
         const data = await res.json();
         setPixData(data);
         setIsPixLoading(false);
-
-        // Auto confirm payment simulation after 6 seconds
-        startSimulatedPaymentApproval();
       } catch (err) {
-        // Mock fallback if API fails
-        console.warn("Using offline mock PIX data");
-        setTimeout(() => {
-          setPixData({
-            payment_id: `PAY-${Math.floor(100000 + Math.random() * 900000)}`,
-            pix_copia_e_cola: `00020101021226830014BR.GOV.BCB.PIX2561pix-condominio-smart@banco.com.br5204000053039865406${totalAmount.toFixed(2)}5802BR5925Condominio Smart Minimerca6009SAO PAULO62070503***6304FC2A`,
-            amount: totalAmount,
-          });
-          setIsPixLoading(false);
-          startSimulatedPaymentApproval();
-        }, 800);
+        console.warn("Erro ao gerar PIX real", err);
+        setIsPixLoading(false);
+        setErrorMessage('Não foi possível gerar o PIX agora. Tente novamente.');
       }
     }
   };
 
-  // Card insertion simulation
+  // Card flow (aguarda integração POS real)
   const handleSimulateCardInsert = () => {
     setPaymentState('PROCESSING');
-    setTimeout(() => {
-      // 90% chance success, 10% error
-      if (Math.random() > 0.1) {
-        handlePaymentSuccess();
-      } else {
-        setPaymentState('FAILED');
-        setErrorMessage('Cartão recusado pelo banco emissor. Verifique o saldo ou utilize outro cartão.');
-      }
-    }, 2500);
-  };
-
-  const startSimulatedPaymentApproval = () => {
-    // Standard mock approval
-    const timer = setTimeout(() => {
-      handlePaymentSuccess();
-    }, 7000);
-    return () => clearTimeout(timer);
+    setErrorMessage('');
   };
 
   const handlePaymentSuccess = () => {
@@ -828,14 +801,8 @@ const Checkout = () => {
                     </div>
                   )}
 
-                  {/* Simulator hook */}
                   <div className="pt-4 border-t border-slate-850/60 max-w-xs mx-auto">
-                    <button
-                      onClick={handlePaymentSuccess}
-                      className="w-full py-3 px-4 rounded-xl bg-slate-950 hover:bg-slate-850 border border-slate-800 text-slate-400 hover:text-slate-200 font-bold text-xs transition-colors cursor-pointer uppercase"
-                    >
-                      Simular Webhook de Aprovação (Pix)
-                    </button>
+                    <p className="text-xs text-slate-500">A confirmação ocorrerá automaticamente após o pagamento no banco.</p>
                   </div>
                 </div>
               )}
@@ -891,7 +858,7 @@ const Checkout = () => {
                       disabled={paymentState === 'PROCESSING'}
                       className="w-full py-4.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-base tracking-wide transition-all disabled:opacity-40 cursor-pointer shadow-lg hover:shadow-indigo-500/20"
                     >
-                      {paymentState === 'PROCESSING' ? 'PROCESSANDO TRANSAÇÃO...' : 'SIMULAR APROXIMAÇÃO/INSERÇÃO'}
+                      {paymentState === 'PROCESSING' ? 'AGUARDANDO RETORNO DA MAQUININHA...' : 'INICIAR PAGAMENTO NO POS'}
                     </button>
                     {paymentState === 'FAILED' && (
                       <button
