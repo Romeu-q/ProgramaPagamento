@@ -19,5 +19,9 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     cpf = Column(String, unique=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=True)
     password = Column(String) # Senha (hash)
     is_adult = Column(Boolean, default=False)
+    is_email_verified = Column(Boolean, default=False)
+    email_verification_code = Column(String, nullable=True)
+    marketing_opt_in = Column(Boolean, default=False)

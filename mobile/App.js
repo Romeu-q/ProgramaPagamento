@@ -38,8 +38,12 @@ export default function App() {
   // Auth state
   const [authMode, setAuthMode] = useState(AUTH_MODE.LOGIN);
   const [cpf, setCpf] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [pendingVerificationCpf, setPendingVerificationCpf] = useState('');
+  const [marketingOptIn, setMarketingOptIn] = useState(true);
   const [forgotCpf, setForgotCpf] = useState('');
   const [forgotNewPassword, setForgotNewPassword] = useState('');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -70,8 +74,8 @@ export default function App() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const laserAnim = useRef(new Animated.Value(0)).current;
 
-  // Live Server Backend Config
-  const API_URL = 'http://192.168.0.13:8000';
+  // Backend público (produção) com fallback local para desenvolvimento
+  const API_URL = (process.env.EXPO_PUBLIC_API_URL || 'http://192.168.0.13:8000').replace(/\/$/, '');
 
   useEffect(() => {
     (async () => {
@@ -202,6 +206,12 @@ export default function App() {
     if (normalizedCpf.length !== 11) return Alert.alert('CPF inválido', 'Por favor, digite um CPF válido com 11 dígitos.'), false;
     if (!password || password.length < 4) return Alert.alert('Senha inválida', 'A senha precisa ter pelo menos 4 caracteres.'), false;
     if (authMode === AUTH_MODE.REGISTER && password !== confirmPassword) return Alert.alert('Senhas diferentes', 'A confirmação de senha não confere.'), false;
+    if (authMode === AUTH_MODE.REGISTER) {
+      const normalizedEmail = email.trim().toLowerCase();
+      if (!normalizedEmail || !normalizedEmail.includes('@') || !normalizedEmail.includes('.')) {
+        return Alert.alert('Email inválido', 'Digite um email válido para confirmar o cadastro.'), false;
+      }
+    }
     return true;
   };
 
@@ -210,23 +220,38 @@ export default function App() {
     setIsAdult(nextIsAdult);
     await AsyncStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify({ token: nextToken, isAdult: nextIsAdult }));
   };
-
   const handleLogin = async () => {
     if (!validateAuthForm()) return;
     setIsLoading(true);
     try {
-      const data = await apiRequest('/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cpf: normalizedCpf, password }) }, 'Credenciais inválidas.');
+      const data = await apiRequest('/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cpf: normalizedCpf, password }) }, 'Credenciais invalidas.');
       await persistSession(data.access_token, data.is_adult);
     } catch (error) {
-      // Mock local login for fast user testing and demo
-      Alert.alert(
-        'Ambiente de Demonstração',
-        'Servidor offline. Deseja entrar em modo simulação offline?',
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Entrar', onPress: () => persistSession(`TOKEN_MOCK_${normalizedCpf}`, !normalizedCpf.startsWith('000')) }
-        ]
-      );
+      const message = parseApiError(error, 'Nao foi possivel entrar.');
+      const lower = message.toLowerCase();
+      const isNetworkIssue =
+        lower.includes('tempo de resposta') ||
+        lower.includes('network request failed') ||
+        lower.includes('erro de comunica') ||
+        lower.includes('failed to fetch');
+
+      if (isNetworkIssue) {
+        Alert.alert(
+          'Ambiente de Demonstracao',
+          'Servidor offline. Deseja entrar em modo simulacao offline?',
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            { text: 'Entrar', onPress: () => persistSession('TOKEN_MOCK', !normalizedCpf.startsWith('000')) }
+          ]
+        );
+      } else {
+        if (lower.includes('confirme seu email')) {
+          setPendingVerificationCpf(normalizedCpf);
+          Alert.alert('Confirmação pendente', 'Confirme seu email para liberar o login.');
+          return;
+        }
+        Alert.alert('Erro no login', message);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -236,11 +261,59 @@ export default function App() {
     if (!validateAuthForm()) return;
     setIsLoading(true);
     try {
-      const data = await apiRequest('/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cpf: normalizedCpf, password }) }, 'Falha no cadastro.');
-      await persistSession(data.access_token, data.is_adult);
-      Alert.alert('Conta criada', 'Cadastro concluído com sucesso no minimercado.');
+      await apiRequest('/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cpf: normalizedCpf,
+          email: email.trim().toLowerCase(),
+          password,
+          marketing_opt_in: marketingOptIn,
+        })
+      }, 'Falha no cadastro.');
+      setPendingVerificationCpf(normalizedCpf);
+      setVerificationCode('');
+      Alert.alert('Cadastro criado', 'Enviamos um código para seu email. Confirme para liberar o app.');
     } catch (error) {
       Alert.alert('Erro no cadastro', parseApiError(error, 'Não foi possível cadastrar.'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyEmail = async () => {
+    if (!pendingVerificationCpf) return Alert.alert('Cadastro pendente', 'Faça o cadastro primeiro.');
+    const cleanCode = verificationCode.replace(/\D/g, '').slice(0, 6);
+    if (cleanCode.length !== 6) return Alert.alert('Código inválido', 'Digite o código de 6 dígitos recebido no email.');
+
+    setIsLoading(true);
+    try {
+      await apiRequest('/auth/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cpf: pendingVerificationCpf, verification_code: cleanCode }),
+      }, 'Falha ao confirmar email.');
+      setVerificationCode('');
+      setPendingVerificationCpf('');
+      setAuthMode(AUTH_MODE.LOGIN);
+      Alert.alert('Email confirmado', 'Conta liberada! Agora entre com CPF e senha.');
+    } catch (error) {
+      Alert.alert('Erro na confirmação', parseApiError(error, 'Não foi possível confirmar email.'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!pendingVerificationCpf) return Alert.alert('Cadastro pendente', 'Faça o cadastro primeiro.');
+    setIsLoading(true);
+    try {
+      await apiRequest(`/auth/resend-verification?cpf=${pendingVerificationCpf}`, {
+        method: 'POST',
+      }, 'Falha ao reenviar código.');
+      Alert.alert('Reenviado', 'Enviamos um novo código para seu email.');
+    } catch (error) {
+      Alert.alert('Erro', parseApiError(error, 'Não foi possível reenviar o código.'));
     } finally {
       setIsLoading(false);
     }
@@ -409,8 +482,11 @@ export default function App() {
           text: 'Sair', style: 'destructive', onPress: async () => {
             setToken(null);
             setCpf('');
+            setEmail('');
             setPassword('');
             setConfirmPassword('');
+            setVerificationCode('');
+            setPendingVerificationCpf('');
             setCart([]);
             setPixData(null);
             setAuthMode(AUTH_MODE.LOGIN);
@@ -490,6 +566,21 @@ export default function App() {
             />
           </View>
 
+          {authMode === AUTH_MODE.REGISTER && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Seu Email</Text>
+              <TextInput
+                style={styles.inputField}
+                placeholder="voce@email.com"
+                placeholderTextColor="#94a3b8"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={email}
+                onChangeText={setEmail}
+              />
+            </View>
+          )}
+
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Sua Senha</Text>
             <TextInput
@@ -503,17 +594,24 @@ export default function App() {
           </View>
 
           {authMode === AUTH_MODE.REGISTER && (
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Confirmar Senha</Text>
-              <TextInput
-                style={styles.inputField}
-                placeholder="Repita a senha cadastrada"
-                placeholderTextColor="#94a3b8"
-                secureTextEntry
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-              />
-            </View>
+            <>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Confirmar Senha</Text>
+                <TextInput
+                  style={styles.inputField}
+                  placeholder="Repita a senha cadastrada"
+                  placeholderTextColor="#94a3b8"
+                  secureTextEntry
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                />
+              </View>
+              <TouchableOpacity onPress={() => setMarketingOptIn(prev => !prev)} style={{ marginBottom: 14 }}>
+                <Text style={styles.forgotBtnText}>
+                  {marketingOptIn ? '☑' : '☐'} Quero receber promoções por email
+                </Text>
+              </TouchableOpacity>
+            </>
           )}
 
           <TouchableOpacity
@@ -567,6 +665,26 @@ export default function App() {
               </TouchableOpacity>
             </View>
           )}
+
+          {pendingVerificationCpf ? (
+            <View style={styles.forgotWrapper}>
+              <Text style={styles.forgotSubtitle}>Confirme o código enviado para o email do CPF {formatCpf(pendingVerificationCpf)}.</Text>
+              <TextInput
+                style={styles.inputField}
+                placeholder="Código de 6 dígitos"
+                placeholderTextColor="#94a3b8"
+                keyboardType="numeric"
+                value={verificationCode}
+                onChangeText={(text) => setVerificationCode(text.replace(/\D/g, '').slice(0, 6))}
+              />
+              <TouchableOpacity style={[styles.forgotSubmitBtn, { marginTop: 10 }]} onPress={handleVerifyEmail} disabled={isLoading}>
+                <Text style={styles.forgotSubmitBtnText}>Confirmar Email</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.forgotBtn} onPress={handleResendVerification} disabled={isLoading}>
+                <Text style={styles.forgotBtnText}>Reenviar código</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
 
         </View>
 
@@ -713,7 +831,7 @@ export default function App() {
             {pixData && (
               <View style={styles.pixResultBox}>
                 <View style={styles.pixResultHeader}>
-                  <Text style={styles.pixResultHeading}>Pix Gerado com Sucesso! ⚡</Text>
+                  <Text style={styles.pixResultHeading}>Pix Gerado com Sucesso! âš¡</Text>
                   <Text style={styles.pixResultAmount}>Valor: R$ {pixData.amount.toFixed(2)}</Text>
                 </View>
                 <Text style={styles.pixResultText}>Copie o código abaixo e pague no app do seu banco:</Text>

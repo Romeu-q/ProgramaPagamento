@@ -15,6 +15,13 @@
         "projectId": "2540dda8-3ac7-4884-89dd-44614f7d1372"
       }
     },
-    "owner": "romas-q"
+    "owner": "romas-q",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/2540dda8-3ac7-4884-89dd-44614f7d1372"
+    },
+    "ios": {}
   }
 }

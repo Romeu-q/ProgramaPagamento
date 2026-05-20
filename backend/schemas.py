@@ -57,7 +57,9 @@ class PaymentProcessResponse(BaseModel):
 
 class UserCreate(BaseModel):
     cpf: str
+    email: str
     password: str
+    marketing_opt_in: bool = False
 
 
 class UserLogin(BaseModel):
@@ -68,6 +70,16 @@ class UserLogin(BaseModel):
 class PasswordResetRequest(BaseModel):
     cpf: str
     new_password: str
+
+
+class EmailVerificationRequest(BaseModel):
+    cpf: str
+    verification_code: str
+
+
+class MarketingMessageRequest(BaseModel):
+    subject: str
+    body: str
 
 
 class TokenResponse(BaseModel):
